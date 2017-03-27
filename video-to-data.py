@@ -9,6 +9,7 @@ from shutil import rmtree
 import binascii
 import bson
 
+TMP_DIR = '/tmp/bwa'
 BASE_DIR = join(dirname(__file__), 'bwa')
 
 
@@ -24,9 +25,9 @@ def get_fps(video_file):
 if __name__ == '__main__':
     fps = get_fps(argv[1])
     video_id = splitext(basename(argv[1]))[0]
-    bmp_dir = join(BASE_DIR, video_id)
+    bmp_dir = join(TMP_DIR, video_id)
     makedirs(bmp_dir, exist_ok=True)
-    call(['ffmpeg', '-y', '-i', argv[1], '-vf',
+    call(['ffmpeg', '-loglevel', 'panic', '-y', '-i', argv[1], '-vf',
           'scale=8:8', '-pix_fmt', 'rgb8', bmp_dir + '/%d.bmp'])
     with Pool(processes=56) as pool:
         data_array = pool.map(to_data, (join(bmp_dir, i)

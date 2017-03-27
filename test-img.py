@@ -7,6 +7,7 @@ from os import listdir, remove, makedirs
 from os.path import basename, splitext, join, isfile, dirname
 import bson
 
+TMP_DIR = '/tmp/bwa'
 BASE_DIR = join(dirname(__file__), 'bwa')
 
 
@@ -30,8 +31,8 @@ def find_similar(data_file, target):
     return similarities[-3:]
 
 if __name__ == "__main__":
-    makedirs(BASE_DIR, exist_ok=True)
-    tmp_bmp = join(BASE_DIR, argv[1] + '.bmp')
+    makedirs(TMP_DIR, exist_ok=True)
+    tmp_bmp = join(TMP_DIR, argv[1] + '.bmp')
     call(['ffmpeg', '-y', '-i', argv[1], '-vf',
           'scale=8:8', '-pix_fmt', 'rgb8', tmp_bmp])
     im = Image.open(tmp_bmp)
