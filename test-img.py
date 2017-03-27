@@ -33,7 +33,7 @@ def find_similar(data_file, target):
 if __name__ == "__main__":
     makedirs(TMP_DIR, exist_ok=True)
     tmp_bmp = join(TMP_DIR, argv[1] + '.bmp')
-    call(['ffmpeg', '-y', '-i', argv[1], '-vf',
+    call(['ffmpeg', '-loglevel', 'panic', '-y', '-i', argv[1], '-vf',
           'scale=8:8', '-pix_fmt', 'rgb8', tmp_bmp])
     im = Image.open(tmp_bmp)
     b = bytes(im.getdata())
