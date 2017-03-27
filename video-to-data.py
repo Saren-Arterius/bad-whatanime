@@ -4,12 +4,12 @@ from subprocess import call, check_output
 from PIL import Image
 from sys import argv
 from os import listdir, makedirs
-from os.path import basename, splitext, join
+from os.path import basename, splitext, join, dirname
 from shutil import rmtree
 import binascii
 import bson
 
-BASE_DIR = '/tmp/bwa'
+BASE_DIR = join(dirname(__file__), 'bwa')
 
 
 def to_data(bmp_file):

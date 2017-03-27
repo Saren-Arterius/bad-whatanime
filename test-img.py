@@ -4,10 +4,10 @@ from subprocess import call
 from PIL import Image
 from sys import argv
 from os import listdir, remove, makedirs
-from os.path import basename, splitext, join, isfile
+from os.path import basename, splitext, join, isfile, dirname
 import bson
 
-BASE_DIR = '/tmp/bwa'
+BASE_DIR = join(dirname(__file__), 'bwa')
 
 
 def diff(a, b):
