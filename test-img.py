@@ -42,6 +42,5 @@ if __name__ == "__main__":
             BASE_DIR) if isfile(join(BASE_DIR, data_file)) and splitext(data_file)[1] == '.dat'])
     results = [item for sublist in results for item in sublist]
     results.sort(key=lambda k: k['val'])
-    for info in results:
-        info.update({'similarity': 1 - info['val'] / 16384})
-    print(results)
+    for result in results[:5]:
+        print("{}%: '{}' | {}s".format(round((1 - result['val'] / 16384) * 10000) / 100, result['id'], round(result['position_second'] * 100) / 100))
