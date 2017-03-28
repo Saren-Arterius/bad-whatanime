@@ -14,6 +14,7 @@ FIND_BOUND = 768
 INDEX_BOUND = 768
 DUPLICATE_FRAME_THRESHOLD = 0.1
 
+
 def rgb(i):
     red = i >> 5
     blue = (i >> 2) & 7
@@ -26,7 +27,8 @@ def color_array_diff(a, b):
     for i in range(len(a)):
         ar, ag, ab = rgb(a[i])
         br, bg, bb = rgb(b[i])
-        diff += sqrt((ar - br) * (ar - br) + (ag - bg) * (ag - bg) + (ab - bb) * (ab - bb))
+        diff += sqrt((ar - br) * (ar - br) + (ag - bg)
+                     * (ag - bg) + (ab - bb) * (ab - bb))
     return diff
 
 
@@ -99,7 +101,8 @@ class BWA():
             while True:
                 if right == l:
                     break
-                val = color_array_diff(data_array[left], data_array[right]) / INDEX_BOUND
+                val = color_array_diff(data_array[left], data_array[
+                                       right]) / INDEX_BOUND
                 if val > DUPLICATE_FRAME_THRESHOLD:
                     data_table[str(left)] = data_array[left]
                     left = right
