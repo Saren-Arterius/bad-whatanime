@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from subprocess import call, check_output
 from PIL import Image
 from os import listdir, remove, makedirs
@@ -75,7 +75,7 @@ class BWA():
         im = Image.open(tmp_bmp)
         b = bytes(im.getdata())
         remove(tmp_bmp)
-        with Pool(processes=56) as pool:
+        with Pool(processes=cpu_count()) as pool:
             results = pool.starmap(find_similar, [(join(self.base_dir, data_file), b) for data_file in listdir(
                 self.base_dir) if isfile(join(self.base_dir, data_file)) and splitext(data_file)[1] == '.dat'])
         results = [item for sublist in results for item in sublist]
@@ -89,7 +89,7 @@ class BWA():
         makedirs(bmp_dir, exist_ok=True)
         call(['ffmpeg', '-y', '-i', video_file, '-vf',
               'scale=8:8', '-pix_fmt', 'bgr8', bmp_dir + '/%d.bmp'])
-        with Pool(processes=56) as pool:
+        with Pool(processes=cpu_count()) as pool:
             data_array = pool.map(to_data, (join(bmp_dir, i)
                                             for i in sorted(listdir(bmp_dir), key=lambda f: int(f.split('.')[0]))))
         data_table = {}
