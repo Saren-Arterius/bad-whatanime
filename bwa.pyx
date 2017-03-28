@@ -10,7 +10,9 @@ from math import sqrt
 import bson
 
 TMP_DIR = '/tmp/bwa'
-
+FIND_BOUND = 768
+INDEX_BOUND = 768
+DUPLICATE_FRAME_THRESHOLD = 0.1
 
 def rgb(i):
     red = i >> 5
@@ -24,8 +26,7 @@ def color_array_diff(a, b):
     for i in range(len(a)):
         ar, ag, ab = rgb(a[i])
         br, bg, bb = rgb(b[i])
-        diff += sqrt((ar - br) * (ar - br) + (ag - bg)
-                     * (ag - bg) + (ab - bb) * (ab - bb))
+        diff += sqrt((ar - br) * (ar - br) + (ag - bg) * (ag - bg) + (ab - bb) * (ab - bb))
     return diff
 
 
@@ -39,15 +40,15 @@ def to_data(bmp_file):
 
 
 def find_similar(data_file, target):
-    similarities = [{'val': 16385}]
+    similarities = [{'val': FIND_BOUND + 1}]
     id = splitext(basename(data_file))[0]
     db = bson.loads(open(data_file, 'rb').read())
-    for frame_i, frame_bytes in enumerate(db['data_array']):
-        val = fast_color_array_diff(target, frame_bytes)
+    for frame_i, frame_bytes in db['data_table'].items():
+        val = color_array_diff(target, frame_bytes)
         if val < similarities[-1]['val']:
             similarities.append({
-                'position_second': frame_i / db['fps'],
-                'position_frame': frame_i,
+                'position_second': int(frame_i) / db['fps'],
+                'position_frame': int(frame_i),
                 'val': val,
                 'id': id
             })
@@ -89,6 +90,22 @@ class BWA():
         with Pool(processes=56) as pool:
             data_array = pool.map(to_data, (join(bmp_dir, i)
                                             for i in sorted(listdir(bmp_dir), key=lambda f: int(f.split('.')[0]))))
+        data_table = {}
+        left = 0
+        right = 0
+        l = len(data_array)
+        while right != l:
+            right = left + 1
+            while True:
+                if right == l:
+                    break
+                val = color_array_diff(data_array[left], data_array[right]) / INDEX_BOUND
+                if val > DUPLICATE_FRAME_THRESHOLD:
+                    data_table[str(left)] = data_array[left]
+                    left = right
+                    break
+                right += 1
+
         open(join(self.base_dir, video_id + '.dat'),
-             'wb').write(bson.dumps({'fps': fps, 'data_array': data_array}))
+             'wb').write(bson.dumps({'fps': fps, 'data_table': data_table}))
         rmtree(bmp_dir)
