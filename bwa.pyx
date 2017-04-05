@@ -6,10 +6,6 @@ from PIL import Image
 from os import listdir, remove, makedirs
 from os.path import basename, splitext, join, isfile, dirname, realpath
 from shutil import rmtree
-from sys import executable
-from math import sqrt
-from struct import unpack
-from time import time, sleep
 import colorsys
 import bson
 
@@ -23,35 +19,10 @@ CANDIDATES_LEFTOVER_THRESHOLD = 50
 DUPLICATE_FRAME_THRESHOLD = 0.025
 # backslash + forward slash
 INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(1, 9)]
+
 index_cols_map = {}
 for i, val in enumerate(INDEX_COLS):
     index_cols_map[val] = i
-"""
-def compress_bytes(bs):
-    compressed = b''
-    for i in range(int(len(bs) / 2)):
-        compressed += bytes([(bs[i * 2] << 4) + bs[i * 2 + 1]])
-    return compressed
-
-
-def decompress_bytes(bs):
-    decompressed = b''
-    for b in bs:
-        decompressed += bytes([b >> 4]) + bytes([b & 15])
-    return decompressed
-
-
-def compress_data_table(dt):
-    for frame in dt:
-        for i, hsv_array in enumerate(frame[1]):
-            frame[1][i] = compress_bytes(hsv_array)
-
-
-def decompress_data_table(dt):
-    for frame in dt:
-        for i, hsv_array in enumerate(frame[1]):
-            frame[1][i] = decompress_bytes(hsv_array)
-"""
 
 
 def hsv_array_diff(a, b):
@@ -86,7 +57,6 @@ def move_front(s, i):
 
 
 def generate_indice(col, frame_table, t):
-    # print(col, frame_table[0:2])
     s = sorted(list(range(len(frame_table))),
                key=lambda i: move_front(frame_table[i][1][t], col))
     return s
@@ -96,34 +66,17 @@ def find_candidate_indice(db, target_hsv_array):
     if len(db['h_indice'][0]) < CANDIDATES_LEFTOVER_THRESHOLD:
         return db['h_indice'][0]
     candidates = None
-    # Binary search
     for t, name in enumerate(['h_indice']):
         for col in INDEX_COLS:
             col_i = index_cols_map[col]
-            """
-            col_i = 12
-            col = INDEX_COLS[col_i]
-            """
             indice = db[name][col_i]
-            # print(col, col_i)
             target_value = target_hsv_array[t][col]
-            # Find satisfy min index
-            """
-            if col_i == 12:
-                for mi, i in enumerate(indice):
-                    print(i, db['data_table'][i][1][t][col], db['data_table'][i][1][t])
-            """
             def binary_search(offset):
                 start = 0
                 end = len(indice) - 1
                 while start != end:
                     mid = (start + end) // 2
                     value = db['data_table'][indice[mid]][1][t][col]
-                    """
-                    if col_i == 12:
-                        print(start, mid, end, value, target_value)
-                        sleep(1)
-                    """
                     if offset < 0:
                         if mid == start and end - start == 1:
                             start = end
@@ -138,17 +91,9 @@ def find_candidate_indice(db, target_hsv_array):
                             start = mid
                         else:
                             end = mid
-                """
-                if col_i == 12:
-                    print('return', start)
-                """
                 return start
             left, right = binary_search(
                 -HUE_DIFF_ALLOWANCE), binary_search(HUE_DIFF_ALLOWANCE)
-            """
-            if col_i == 12:
-                print("lr", left, right, indice[left:right + 1], target_value)
-            """
             if candidates is None:
                 candidates = set(indice[left:right + 1])
             else:
@@ -229,29 +174,10 @@ def index_anime(video_file):
             right += 1
     if len(data_table) == 0:
         data_table.append(["0", data_array[0]])
-    """
-    for i, arr in enumerate(data_table):
-        print(i, arr)
-    """
     print('Indexed frame count:', len(data_table))
     with Pool(processes=cpu_count()) as pool:
         h_indice = pool.starmap(
             generate_indice, [(i, data_table, 0) for i in INDEX_COLS])
-        """
-        s_indice = pool.starmap(
-            generate_indice, [(i, data_table, 1) for i in INDEX_COLS])
-        v_indice = pool.starmap(
-            generate_indice, [(i, data_table, 2) for i in INDEX_COLS])
-        """
-    """
-    print('1st column h_indice', h_indice[0])
-    print('2nd column s_indice', s_indice[1])
-    print('3th column v_indice', v_indice[2])
-    """
-    """
-    for mi, i in enumerate(h_indice[0]):
-        print(i, data_table[i][1][0][0], data_table[i][1][0])
-    """
     makedirs(BASE_DIR, exist_ok=True)
     # compress_data_table(data_table)
     data = {
