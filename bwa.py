@@ -21,7 +21,10 @@ FIND_BOUND = INDEX_BOUND
 HUE_DIFF_ALLOWANCE = 1
 CANDIDATES_LEFTOVER_THRESHOLD = 50
 DUPLICATE_FRAME_THRESHOLD = 0.05
-INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(8)]  # backslash + forward slash
+INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(1, 9)]  # backslash + forward slash
+index_cols_map = {}
+for i, val in enumerate(INDEX_COLS):
+    index_cols_map[val] = i
 """
 def compress_bytes(bs):
     compressed = b''
@@ -94,29 +97,61 @@ def find_candidate_indice(db, target_hsv_array):
     # Binary search
     for t, name in enumerate(['h_indice']):
         for col in INDEX_COLS:
-            indice = db[name][col]
+            col_i = index_cols_map[col]
+            """
+            col_i = 12
+            col = INDEX_COLS[col_i]
+            """
+            indice = db[name][col_i]
+            # print(col, col_i)
             target_value = target_hsv_array[t][col]
             # Find satisfy min index
+            """
+            if col_i == 12:
+                for mi, i in enumerate(indice):
+                    print(i, db['data_table'][i][1][t][col], db['data_table'][i][1][t])
+            """
             def binary_search(offset):
                 start = 0
                 end = len(indice) - 1
                 while start != end:
                     mid = (start + end) // 2
                     value = db['data_table'][indice[mid]][1][t][col]
-                    if value >= target_value + offset:
-                        end = mid
-                    elif mid == start and end - start == 1:
-                        start = end
+                    """
+                    if col_i == 12:
+                        print(start, mid, end, value, target_value)
+                        sleep(1)
+                    """
+                    if offset < 0:
+                        if mid == start and end - start == 1:
+                            start = end
+                        elif value >= target_value + offset:
+                            end = mid
+                        else:
+                            start = mid
                     else:
-                        start = mid
+                        if mid == start and end - start == 1:
+                            start = end
+                        elif value <= target_value + offset:
+                            start = mid
+                        else:
+                            end = mid
+                """
+                if col_i == 12:
+                    print('return', start)
+                """
                 return start
             left, right = binary_search(-HUE_DIFF_ALLOWANCE), binary_search(HUE_DIFF_ALLOWANCE)
+            """
+            if col_i == 12:
+                print("lr", left, right, indice[left:right + 1], target_value)
+            """
             if candidates is None:
                 candidates = set(indice[left:right + 1])
             else:
                 candidates &= set(indice[left:right + 1])
             if len(candidates) < CANDIDATES_LEFTOVER_THRESHOLD:
-                # print(col, name)
+                print(col, name)
                 return candidates
     return candidates
 
@@ -131,7 +166,7 @@ def find_similar(data_file, target_hsv_array):
         frame_i, hsv_array = db['data_table'][i]
         val = hsv_array_diff(target_hsv_array, hsv_array)
         # print(i, frame_i, val)
-        if len(similarities) == 0 or val < similarities[-1]['val']:
+        if val < FIND_BOUND and (len(similarities) == 0 or val < similarities[-1]['val']):
             similarities.append({
                 'position_second': int(frame_i) / db['fps'],
                 'position_frame': int(frame_i),
@@ -155,7 +190,7 @@ def find_anime(bmp_file):
     hsv_array = tuples_to_hsv_array(
         [rgb_to_hsv_16(rgb) for rgb in im.getdata()])
     remove(tmp_bmp)
-    with Pool(processes=cpu_count()) as pool:
+    with Pool(processes=1) as pool:
         results = pool.starmap(find_similar, [(join(BASE_DIR, data_file), hsv_array) for data_file in listdir(
             BASE_DIR) if isfile(join(BASE_DIR, data_file)) and splitext(data_file)[1] == '.dat'])
     results = [item for sublist in results for item in sublist]
