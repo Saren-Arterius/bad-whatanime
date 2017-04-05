@@ -20,8 +20,9 @@ INDEX_BOUND = 2 * ((8 * 8) * 16) + VALUE_TORLENCE_FACTOR * ((8 * 8) * 16)
 FIND_BOUND = INDEX_BOUND
 HUE_DIFF_ALLOWANCE = 1
 CANDIDATES_LEFTOVER_THRESHOLD = 50
-DUPLICATE_FRAME_THRESHOLD = 0.05
-INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(1, 9)]  # backslash + forward slash
+DUPLICATE_FRAME_THRESHOLD = 0.025
+# backslash + forward slash
+INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(1, 9)]
 index_cols_map = {}
 for i, val in enumerate(INDEX_COLS):
     index_cols_map[val] = i
@@ -56,7 +57,8 @@ def decompress_data_table(dt):
 def hsv_array_diff(a, b):
     diff = 0
     for i in range(len(a[0])):
-        hd, sd, vd = abs(a[0][i] - b[0][i]), abs(a[1][i] - b[1][i]), abs(a[2][i] - b[2][i])
+        hd, sd, vd = abs(a[0][i] - b[0][i]), abs(a[1][i] -
+                                                 b[1][i]), abs(a[2][i] - b[2][i])
         if hd > HUE_DIFF_ALLOWANCE:
             return INDEX_BOUND
         diff += hd + sd + VALUE_TORLENCE_FACTOR * vd
@@ -86,13 +88,13 @@ def move_front(s, i):
 def generate_indice(col, frame_table, t):
     # print(col, frame_table[0:2])
     s = sorted(list(range(len(frame_table))),
-                  key=lambda i: move_front(frame_table[i][1][t], col))
+               key=lambda i: move_front(frame_table[i][1][t], col))
     return s
 
 
 def find_candidate_indice(db, target_hsv_array):
     if len(db['h_indice'][0]) < CANDIDATES_LEFTOVER_THRESHOLD:
-        return candidates
+        return db['h_indice'][0]
     candidates = None
     # Binary search
     for t, name in enumerate(['h_indice']):
@@ -141,7 +143,8 @@ def find_candidate_indice(db, target_hsv_array):
                     print('return', start)
                 """
                 return start
-            left, right = binary_search(-HUE_DIFF_ALLOWANCE), binary_search(HUE_DIFF_ALLOWANCE)
+            left, right = binary_search(
+                -HUE_DIFF_ALLOWANCE), binary_search(HUE_DIFF_ALLOWANCE)
             """
             if col_i == 12:
                 print("lr", left, right, indice[left:right + 1], target_value)
@@ -151,7 +154,6 @@ def find_candidate_indice(db, target_hsv_array):
             else:
                 candidates &= set(indice[left:right + 1])
             if len(candidates) < CANDIDATES_LEFTOVER_THRESHOLD:
-                print(col, name)
                 return candidates
     return candidates
 
@@ -190,7 +192,7 @@ def find_anime(bmp_file):
     hsv_array = tuples_to_hsv_array(
         [rgb_to_hsv_16(rgb) for rgb in im.getdata()])
     remove(tmp_bmp)
-    with Pool(processes=1) as pool:
+    with Pool(processes=cpu_count()) as pool:
         results = pool.starmap(find_similar, [(join(BASE_DIR, data_file), hsv_array) for data_file in listdir(
             BASE_DIR) if isfile(join(BASE_DIR, data_file)) and splitext(data_file)[1] == '.dat'])
     results = [item for sublist in results for item in sublist]
