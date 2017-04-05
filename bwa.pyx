@@ -107,12 +107,10 @@ def find_similar(data_file, target_hsv_array):
     similarities = []
     id = splitext(basename(data_file))[0]
     db = bson.loads(open(data_file, 'rb').read())
-    # decompress_data_table(db['data_table'])
     indice = find_candidate_indice(db, target_hsv_array)
     for i in indice:
         frame_i, hsv_array = db['data_table'][i]
         val = hsv_array_diff(target_hsv_array, hsv_array)
-        # print(i, frame_i, val)
         if val < FIND_BOUND and (len(similarities) == 0 or val < similarities[-1]['val']):
             similarities.append({
                 'position_second': int(frame_i) / db['fps'],
@@ -166,7 +164,6 @@ def index_anime(video_file):
                 break
             val = hsv_array_diff(data_array[left], data_array[
                 right]) / INDEX_BOUND
-            # print(left, right, val)
             if val >= DUPLICATE_FRAME_THRESHOLD:
                 data_table.append([str(left), data_array[left]])
                 left = right
@@ -179,7 +176,6 @@ def index_anime(video_file):
         h_indice = pool.starmap(
             generate_indice, [(i, data_table, 0) for i in INDEX_COLS])
     makedirs(BASE_DIR, exist_ok=True)
-    # compress_data_table(data_table)
     data = {
         'fps': fps,
         'data_table': data_table,
