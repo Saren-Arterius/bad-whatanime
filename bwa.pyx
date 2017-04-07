@@ -11,14 +11,14 @@ import bson
 
 BASE_DIR = join(realpath(dirname(main_file)), 'bwa')
 TMP_DIR = '/tmp/bwa'
-VALUE_TORLENCE_FACTOR = 0.5
-INDEX_BOUND = 2 * ((8 * 8) * 16) + VALUE_TORLENCE_FACTOR * ((8 * 8) * 16)
+INDEX_BOUND = 3 * ((8 * 8) * 16)
 FIND_BOUND = INDEX_BOUND
-HUE_DIFF_ALLOWANCE = 1
+VAL_DIFF_ALLOWANCE = 1
 CANDIDATES_LEFTOVER_THRESHOLD = 50
-DUPLICATE_FRAME_THRESHOLD = 0.025
 # backslash + forward slash
 INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(1, 9)]
+ACTIVE_HSV_INDICE_NAME = 'v_indice'
+ACTIVE_HSV_INDICE_NUM = 2 # Index using value
 
 index_cols_map = {}
 for i, val in enumerate(INDEX_COLS):
@@ -28,11 +28,10 @@ for i, val in enumerate(INDEX_COLS):
 def hsv_array_diff(a, b):
     diff = 0
     for i in range(len(a[0])):
-        hd, sd, vd = abs(a[0][i] - b[0][i]), abs(a[1][i] -
-                                                 b[1][i]), abs(a[2][i] - b[2][i])
-        if hd > HUE_DIFF_ALLOWANCE:
+        hd, sd, vd = abs(a[0][i] - b[0][i]), abs(a[1][i] - b[1][i]), abs(a[2][i] - b[2][i])
+        if i in INDEX_COLS and vd > VAL_DIFF_ALLOWANCE:
             return INDEX_BOUND
-        diff += hd + sd + VALUE_TORLENCE_FACTOR * vd
+        diff += hd + sd + vd
     return diff
 
 
@@ -63,43 +62,48 @@ def generate_indice(col, frame_table, t):
 
 
 def find_candidate_indice(db, target_hsv_array):
-    if len(db['h_indice'][0]) < CANDIDATES_LEFTOVER_THRESHOLD:
-        return db['h_indice'][0]
+    if len(db[ACTIVE_HSV_INDICE_NAME][0]) < CANDIDATES_LEFTOVER_THRESHOLD:
+        return db[ACTIVE_HSV_INDICE_NAME][0]
     candidates = None
-    for t, name in enumerate(['h_indice']):
-        for col in INDEX_COLS:
-            col_i = index_cols_map[col]
-            indice = db[name][col_i]
-            target_value = target_hsv_array[t][col]
-            def binary_search(offset):
-                start = 0
-                end = len(indice) - 1
-                while start != end:
-                    mid = (start + end) // 2
-                    value = db['data_table'][indice[mid]][1][t][col]
-                    if offset < 0:
-                        if mid == start and end - start == 1:
-                            start = end
-                        elif value >= target_value + offset:
-                            end = mid
-                        else:
-                            start = mid
+    for col in INDEX_COLS:
+        col_i = index_cols_map[col]
+        indice = db[ACTIVE_HSV_INDICE_NAME][col_i]
+        target_value = target_hsv_array[ACTIVE_HSV_INDICE_NUM][col]
+        def binary_search(offset):
+            start = 0
+            end = len(indice) - 1
+            while start != end:
+                mid = (start + end) // 2
+                value = db['data_table'][indice[mid]][1][ACTIVE_HSV_INDICE_NUM][col]
+                if offset < 0:
+                    if mid == start and end - start == 1:
+                        start = end
+                    elif value >= target_value + offset:
+                        end = mid
                     else:
-                        if mid == start and end - start == 1:
-                            start = end
-                        elif value <= target_value + offset:
-                            start = mid
-                        else:
-                            end = mid
-                return start
-            left, right = binary_search(
-                -HUE_DIFF_ALLOWANCE), binary_search(HUE_DIFF_ALLOWANCE)
-            if candidates is None:
-                candidates = set(indice[left:right + 1])
-            else:
-                candidates &= set(indice[left:right + 1])
-            if len(candidates) < CANDIDATES_LEFTOVER_THRESHOLD:
-                return candidates
+                        start = mid
+                else:
+                    if mid == start and end - start == 1:
+                        start = end
+                    elif value <= target_value + offset:
+                        start = mid
+                    else:
+                        end = mid
+            return start
+        if target_value <= 1:
+            left = 0
+        else:
+            left = binary_search(-VAL_DIFF_ALLOWANCE)
+        if target_value >= 14:
+            right = len(indice) - 1
+        else:
+            right = binary_search(VAL_DIFF_ALLOWANCE)
+        if candidates is None:
+            candidates = set(indice[left:right + 1])
+        else:
+            candidates &= set(indice[left:right + 1])
+        if len(candidates) < CANDIDATES_LEFTOVER_THRESHOLD:
+            return candidates
     return candidates
 
 
@@ -147,9 +151,12 @@ def index_anime(video_file):
     fps = get_fps(video_file)
     video_id = splitext(basename(video_file))[0]
     bmp_dir = join(TMP_DIR, video_id)
-    makedirs(bmp_dir, exist_ok=True)
-    call(['ffmpeg', '-y', '-i', video_file, '-vf',
-          'scale=8:8', '-pix_fmt', 'bgr24', bmp_dir + '/%d.bmp'])
+    try:
+        makedirs(bmp_dir)
+        call(['ffmpeg', '-y', '-i', video_file, '-vf',
+              'scale=8:8', '-pix_fmt', 'bgr24', bmp_dir + '/%d.bmp'])
+    except:
+        print('Using existing bmp data')
     with Pool(processes=cpu_count()) as pool:
         data_array = pool.map(to_data, (join(bmp_dir, i)
                                         for i in sorted(listdir(bmp_dir), key=lambda f: int(f.split('.')[0]))))
@@ -157,14 +164,15 @@ def index_anime(video_file):
     left = 0
     right = 0
     l = len(data_array)
+    from time import sleep
+    data_table.append(["0", data_array[0]])
     while right != l:
         right = left + 1
         while True:
             if right == l:
                 break
-            val = hsv_array_diff(data_array[left], data_array[
-                right]) / INDEX_BOUND
-            if val >= DUPLICATE_FRAME_THRESHOLD:
+            val = hsv_array_diff(data_array[left], data_array[right])
+            if val == INDEX_BOUND:
                 data_table.append([str(left), data_array[left]])
                 left = right
                 break
@@ -173,13 +181,13 @@ def index_anime(video_file):
         data_table.append(["0", data_array[0]])
     print('Indexed frame count:', len(data_table))
     with Pool(processes=cpu_count()) as pool:
-        h_indice = pool.starmap(
-            generate_indice, [(i, data_table, 0) for i in INDEX_COLS])
+        indice = pool.starmap(
+            generate_indice, [(i, data_table, ACTIVE_HSV_INDICE_NUM) for i in INDEX_COLS])
     makedirs(BASE_DIR, exist_ok=True)
     data = {
         'fps': fps,
         'data_table': data_table,
-        'h_indice': h_indice
+        ACTIVE_HSV_INDICE_NAME: indice
     }
     open(join(BASE_DIR, video_id + '.dat'), 'wb').write(bson.dumps(data))
-    rmtree(bmp_dir)
+    # rmtree(bmp_dir)
