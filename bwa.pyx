@@ -7,7 +7,7 @@ from os import listdir, remove, makedirs
 from os.path import basename, splitext, join, isfile, dirname, realpath
 from shutil import rmtree
 import colorsys
-import bson
+import msgpack
 
 BASE_DIR = join(realpath(dirname(main_file)), 'bwa')
 TMP_DIR = '/tmp/bwa'
@@ -62,19 +62,20 @@ def generate_indice(col, frame_table, t):
 
 
 def find_candidate_indice(db, target_hsv_array):
-    if len(db[ACTIVE_HSV_INDICE_NAME][0]) < CANDIDATES_LEFTOVER_THRESHOLD:
-        return db[ACTIVE_HSV_INDICE_NAME][0]
+    name = ACTIVE_HSV_INDICE_NAME.encode()
+    if len(db[name][0]) < CANDIDATES_LEFTOVER_THRESHOLD:
+        return db[name][0]
     candidates = None
     for col in INDEX_COLS:
         col_i = index_cols_map[col]
-        indice = db[ACTIVE_HSV_INDICE_NAME][col_i]
+        indice = db[name][col_i]
         target_value = target_hsv_array[ACTIVE_HSV_INDICE_NUM][col]
         def binary_search(offset):
             start = 0
             end = len(indice) - 1
             while start != end:
                 mid = (start + end) // 2
-                value = db['data_table'][indice[mid]][1][ACTIVE_HSV_INDICE_NUM][col]
+                value = db[b'data_table'][indice[mid]][1][ACTIVE_HSV_INDICE_NUM][col]
                 if offset < 0:
                     if mid == start and end - start == 1:
                         start = end
@@ -110,14 +111,14 @@ def find_candidate_indice(db, target_hsv_array):
 def find_similar(data_file, target_hsv_array):
     similarities = []
     id = splitext(basename(data_file))[0]
-    db = bson.loads(open(data_file, 'rb').read())
+    db = msgpack.unpackb(open(data_file, 'rb').read(), use_list=False)
     indice = find_candidate_indice(db, target_hsv_array)
     for i in indice:
-        frame_i, hsv_array = db['data_table'][i]
+        frame_i, hsv_array = db[b'data_table'][i]
         val = hsv_array_diff(target_hsv_array, hsv_array)
         if val < FIND_BOUND and (len(similarities) == 0 or val < similarities[-1]['val']):
             similarities.append({
-                'position_second': int(frame_i) / db['fps'],
+                'position_second': int(frame_i) / db[b'fps'],
                 'position_frame': int(frame_i),
                 'val': val,
                 'id': id
@@ -189,5 +190,5 @@ def index_anime(video_file):
         'data_table': data_table,
         ACTIVE_HSV_INDICE_NAME: indice
     }
-    open(join(BASE_DIR, video_id + '.dat'), 'wb').write(bson.dumps(data))
+    open(join(BASE_DIR, video_id + '.dat'), 'wb').write(msgpack.packb(data))
     # rmtree(bmp_dir)

@@ -4,11 +4,11 @@ Try to replicate whatanime
 # Dependencies
 ## OS
 - POSIX system
-- FFMpeg
+- ffmpeg
 
 ## Python
-- python-pillow
-- bson
+- Pillow
+- msgpack-python
 
 # Usage
 
