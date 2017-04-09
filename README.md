@@ -1,6 +1,15 @@
 # bad-whatanime
 Try to replicate whatanime
 
+# Dependencies
+## OS
+- POSIX system
+- FFMpeg
+
+## Python
+- python-pillow
+- bson
+
 # Usage
 
 ## Compiling using cython
