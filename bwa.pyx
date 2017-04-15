@@ -16,7 +16,7 @@ FIND_BOUND = INDEX_BOUND
 VAL_DIFF_ALLOWANCE = 1
 CANDIDATES_LEFTOVER_THRESHOLD = 50
 # backslash + forward slash
-INDEX_COLS = [i * 9 for i in range(8)] + [i * 7 for i in range(1, 9)]
+INDEX_COLS = [i * 9 for i in range(6)] + [i * 7 for i in range(1, 7)]
 ACTIVE_HSV_INDICE_NAME = 'v_indice'
 ACTIVE_HSV_INDICE_NUM = 2 # Index using value
 
