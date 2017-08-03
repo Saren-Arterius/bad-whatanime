@@ -15,7 +15,7 @@ import redis
 
 TMP_DIR = '/tmp/bwa2'
 # DEGRADE_TO = None
-DEGRADE_TO = '128:128'
+DEGRADE_TO = '16:16'
 hash_db = redis.StrictRedis(
     host='localhost', port=6379, db=10, decode_responses=True)
 meta_db = redis.StrictRedis(
@@ -32,7 +32,8 @@ def get_fps(video_file):
 
 
 def get_hash(filename):
-    return unhexlify(str(imagehash.phash(Image.open(filename)))) + unhexlify(str(imagehash.dhash(Image.open(filename))))
+    # return unhexlify(str(imagehash.phash(Image.open(filename)))) + unhexlify(str(imagehash.dhash(Image.open(filename))))
+    return unhexlify(str(imagehash.phash(Image.open(filename))))
 
 
 def index_anime(video_file):
