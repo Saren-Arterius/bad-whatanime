@@ -15,7 +15,7 @@ import redis
 
 TMP_DIR = '/tmp/bwa2'
 # DEGRADE_TO = None
-DEGRADE_TO = '16:16'
+DEGRADE_TO = '32:32'
 hash_db = redis.StrictRedis(
     host='localhost', port=6379, db=10, decode_responses=True)
 meta_db = redis.StrictRedis(
